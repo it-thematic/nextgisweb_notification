@@ -86,7 +86,7 @@ define([
     CreateWindow
 ) {
 
-    // TODO Ублюдский JS не способен работать нормально     // var GridClass = declare([Grid, Selection], {
+    // TODO оптимизировать // var GridClass = declare([Grid, Selection], {
     var GridClass = declare([Grid, Keyboard, Selection], {
             selectionMode: "single",
             allowTextSelection: true,
@@ -103,8 +103,6 @@ define([
             declare.safeMixin(this, params);
             this._gridInitialized = new Deferred();
 
-            // TODO создание массива с сущьностями
-            //  которая хранит состояние всех подписок.
             var widget = this;
             api.route("notification.subscriber.collection")
                 .get()
@@ -144,7 +142,7 @@ define([
         },
 
 
-        // TODO сделать проверку что такой email и ресурс уже созданы ?
+        // TODO сделать проверку, что такой email и ресурс уже созданы ?
         /** Добавление новой подписки */
         addNewRow: function (data){
             this._data.push(data)
@@ -159,11 +157,11 @@ define([
 
         /** Виджет создание новой подписки */
         _onCreate: function (event){
-            this.createWindow = new CreateWindow({
-                // style: "width: 100%; height: 100%; padding: 0",
-                widget: this
+            this.SubscribeWindow = new SubscribeWindow({
+                widget: this,
+                createNew: true
             });
-            this.createWindow.show();
+            this.SubscribeWindow.show();
         },
 
         /** Виджет обновления существующей подписки */

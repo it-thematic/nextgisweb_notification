@@ -1,0 +1,40 @@
+<div data-dojo-type="${baseClass}">
+
+    <div data-dojo-attach-point="gridPane" data-dojo-type="dijit/layout/ContentPane"
+        data-dojo-props="region: 'center'" style="padding: 0; margin-right: 1px;">
+    </div>
+
+    <div data-dojo-attach-point="toolbar" data-dojo-type="dijit/Toolbar"
+        data-dojo-props="region: 'top'"
+        style="margin-right: 1px;">
+
+         <div data-dojo-attach-point="btnFilter" data-dojo-type="dijit/form/Button"
+            data-dojo-props="iconClass: 'material-icons material-icons-enable', disabled: false"
+            style="position: relative" label="{{gettext 'Filter'}}">
+        </div>
+
+        <select data-dojo-attach-point="btnEmailStore" data-dojo-type="dijit/form/ComboBox">
+        </select>
+
+        <select data-dojo-attach-point="btnResourceStore" data-dojo-type="dijit/form/ComboBox">
+        </select>
+
+        <div style="float: right">
+            <div data-dojo-attach-point="tbSearch" data-dojo-type="dijit/form/TextBox"
+                data-dojo-props="placeHolder: {{gettextString 'Search...'}}"
+                style="margin-right: 2px; width: 20em;">
+            </div>
+        </div>
+    </div>
+
+    <div data-dojo-attach-point="infobar" data-dojo-type="dijit/Toolbar"
+        data-dojo-props="region: 'bottom'"
+        style="margin-right: 1px; display: flex; align-items: center">
+
+        <input data-dojo-type="dijit/form/CheckBox"
+               data-dojo-attach-point="chboxShowSelected"
+               title="{{gettext 'Selected only'}}">
+
+    </div>
+
+</div>

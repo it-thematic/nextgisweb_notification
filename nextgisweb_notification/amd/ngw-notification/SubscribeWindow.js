@@ -29,7 +29,7 @@ define([
     "@nextgisweb/pyramid/api",
     "@nextgisweb/pyramid/i18n!",
     "@nextgisweb/gui/error",
-    "ngw-feature-layer/FeatureGrid",
+    "./FeatureGridNotif"
 ], function (
     declare,
     lang,
@@ -62,95 +62,50 @@ define([
     api,
     i18n,
     error,
-    FeatureGrid
+    FeatureGridNotif
 ) {
-
-    /** Расширяем класс управления таблицей объектов ресурса */
-    var FeatureGridNotif = declare([FeatureGrid], {
-        // Объекты для выделения при инициализации объекта
-        initialSelectRow: null,
-
-        // templateString: i18n.renderTemplate(testtemplate),
-
-        // добавляем объекты, что должны быть выделены в таблице с самого начала
-        startup: function () {
-            this.inherited(arguments);
-
-            var widget = this;
-            this._gridInitialized.then(
-                function () {
-                    widget.gridPane.set("content", widget._grid.domNode);
-                    widget._grid.startup();
-                    return widget;
-                }
-            ).then(
-                function (widget) {
-                    if (widget.initialSelectRow) {
-                        for (var key in widget.initialSelectRow) {
-                            widget._grid.select(widget._grid.row(widget.initialSelectRow[key]))
-                        }
-                    }
-                }
-            );
-            this.btnFilter.iconNode.setAttribute('data-icon', 'filter_alt');
-        },
-
-        postCreate: function () {
-            this.inherited(arguments);
-            domStyle.set(this.btnOpenFeature.domNode, 'display', 'none');
-            domStyle.set(this.btnUpdateFeature.domNode, 'display', 'none');
-            domStyle.set(this.btnDeleteFeature.domNode, 'display', 'none');
-        },
-
-    });
-
 
     /** Класс с логикой обработки таблицы */
     return declare(Dialog, {
+
+        createNew: false,
 
         constructor: function (options) {
             declare.safeMixin(this, options);
             this.widget = options.widget
             this._data = options.row
-            this.title = options.row.data.resource;
+            this.title = this.createNew ? 'Создание новой подписки' : options.row.data.resource ;
         },
 
         buildRendering: function () {
             this.inherited(arguments);
 
-            this.mainContainer = new ContentPane({
-                style: "width: 1000px; height: 500px; padding: 0; max-height:500px"
-                // style: "width: 100%; height: 100%; padding: 0"
-            }).placeAt(this.containerNode);
+            // главный контейнер
+            this.mainContainer = new ContentPane({style: "width: 1000px; height: 500px; padding: 0; max-height:500px"}).placeAt(this.containerNode);
 
             // создание таблицы
             this._grid = new FeatureGridNotif({
                 style: "width: 100%; height: 100%; padding: 0",
-                initialSelectRow: this._data.data.features,
-                layerId: this._data.data.resource_id,
-                readonly: true
+                initialSelectRow: this.createNew ? null : this._data.data.features,
+                layerId: this.createNew ? null : this._data.data.resource_id,
+                createNew: this.createNew
             })
             this._grid.placeAt(this.mainContainer);
             this._grid.startup();
 
             // создание нижнего бара для кнопок
             this.actionBarDown = domConstruct.create("div", {class: "dijitDialogPaneActionBar"}, this.containerNode);
-
-            // очистка всех объектов
+            // кнопки нижнего бара
             this.btnClean = new Button({
                 label: i18n.gettext("Clean"),
                 onClick: lang.hitch(this, this.clean),
                 style: 'display: inline-block'
             }).placeAt(this.actionBarDown);
-
-            // подписка на выделенные объекты
             this.btnOk = new Button({
                 label: i18n.gettext("Apply"),
                 onClick: lang.hitch(this, this.save),
                 style: 'display: inline-block'
             }).placeAt(this.actionBarDown);
-
-            // выход
             this.btnHide = new Button({
                 label: i18n.gettext("Cancel"),
                 onClick: lang.hitch(this, this.hide),
@@ -186,12 +141,12 @@ define([
 
             // если в подписки внесены изменения
             if (!this.equalArrays(this._data.data.features, features)) {
-                // TODO проверку features email
                 var request = {
                     resource_id: this._data.data.resource_id,
-                    feature_ids: features,
-                    email_id: this._data.data.email_id
+                    email_id: this._data.data.email_id,
+                    feature_ids: features
                 }
+
                 // this.widget.save(request)
                 // запрос на обновление подписок
                 api.route("notification.subscriber")
