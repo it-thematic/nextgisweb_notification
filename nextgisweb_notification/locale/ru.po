@@ -1,0 +1,52 @@
+#: api.py:107
+msgid "Notification"
+msgstr "Уведомления"
+
+msgid "Objects of layer"
+msgstr "Объекты слоя"
+
+msgid "Create notification"
+msgstr "Создание новой подписки"
+
+msgid "Subscribe for notification"
+msgstr "Подписки на уведомления"
+
+msgid "Selected only"
+msgstr "Только выбранные"
+
+msgid "Search..."
+msgstr "Поиск..."
+
+msgid "Filter"
+msgstr "Фильтровать"
+
+msgid "Create"
+msgstr "Создать"
+
+msgid "Delete"
+msgstr "Удалить"
+
+msgid "Apply"
+msgstr "Применить"
+
+msgid "Clean"
+msgstr "Очистить"
+
+msgid "Cancel"
+msgstr "Отмена"
+
+msgid "Edit"
+msgstr "Редактировать"
+
+msgid "Open"
+msgstr "Открыть"
+
+msgid "Email notifications"
+msgstr "Email уведомления"
+
+msgid "Email selection"
+msgstr "Выбор почты"
+
+msgid "Resource selection"
+msgstr "Выбор ресурса"
+

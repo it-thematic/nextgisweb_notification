@@ -1,0 +1,58 @@
+{
+  "": {
+    "domain": "notification",
+    "lang": "ru",
+    "plural_forms": "nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2)"
+  },
+  "Notification": [
+    "Уведомления"
+  ],
+  "Objects of layer": [
+    "Объекты слоя"
+  ],
+  "Create notification": [
+    "Создание новой подписки"
+  ],
+  "Subscribe for notification": [
+    "Подписки на уведомления"
+  ],
+  "Selected only": [
+    "Только выбранные"
+  ],
+  "Search...": [
+    "Поиск..."
+  ],
+  "Filter": [
+    "Фильтровать"
+  ],
+  "Create": [
+    "Создать"
+  ],
+  "Delete": [
+    "Удалить"
+  ],
+  "Apply": [
+    "Применить"
+  ],
+  "Clean": [
+    "Очистить"
+  ],
+  "Cancel": [
+    "Отмена"
+  ],
+  "Edit": [
+    "Редактировать"
+  ],
+  "Open": [
+    "Открыть"
+  ],
+  "Email notifications": [
+    "Email уведомления"
+  ],
+  "Email selection": [
+    "Выбор почты"
+  ],
+  "Resource selection": [
+    "Выбор ресурса"
+  ]
+}
