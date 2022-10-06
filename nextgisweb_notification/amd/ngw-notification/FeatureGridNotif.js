@@ -130,27 +130,30 @@ define([
             this._gridInitialized = new Deferred();
 
             if (!this.createNew){
-                var widget = this;
-                api.route("feature_layer.field", {id: this.layerId})
-                    .get()
-                    .then(function (data) {
-                        widget._fields = data;
-                        widget._lookupTableData = {};
+                this._gridConstruct();}
+        },
 
-                        var lookupTableDefereds = [];
-                        array.forEach(data, function (field) {
-                            if (field.lookup_table != null) {
-                                lookupTableDefereds.push(
-                                    lookupTableCached.load(field.lookup_table.id)
-                                );
-                            }
-                        });
+        _gridConstruct: function () {
+            var widget = this;
+            api.route("feature_layer.field", {id: this.layerId})
+                .get()
+                .then(function (data) {
+                    widget._fields = data;
+                    widget._lookupTableData = {};
 
-                        all(lookupTableDefereds).then(function () {
-                            widget.initializeGrid();
-                        });
+                    var lookupTableDefereds = [];
+                    array.forEach(data, function (field) {
+                        if (field.lookup_table != null) {
+                            lookupTableDefereds.push(
+                                lookupTableCached.load(field.lookup_table.id)
+                            );
+                        }
                     });
-                }
+
+                    all(lookupTableDefereds).then(function () {
+                        widget.initializeGrid();
+                    });
+                });
         },
 
         /**
@@ -198,6 +201,7 @@ define([
                                 widget.btnEmailStore.store = widget.emailStore;
                                 widget.btnResourceStore.store = widget.resourceStore;
 
+                                widget.btnEmailStore.on("change", lang.hitch(widget, widget._chooseEmail));
                                 widget.btnResourceStore.on("change", lang.hitch(widget, widget._chooseResource));
                             })
                     });
@@ -208,31 +212,55 @@ define([
         },
 
 
-        _chooseResource: function (){
+        // TODO
+        /**
+         * Выбор email
+         */
+        _chooseEmail: function (){
+            console.log('_chooseEmail')
+            console.log(this.btnEmailStore.item)
+        },
+
+        /**
+         * Выбор ресурса
+         */
+        _chooseSource: function (){
             this.createNew = false;
             this.layerId = this.btnResourceStore.item.id;
 
-            // TODO оптимизировать
-            var widget = this;
-            api.route("feature_layer.field", {id: this.layerId})
-                .get()
-                .then(function (data) {
-                    widget._fields = data;
-                    widget._lookupTableData = {};
+            if (this._grid){
+                this._grid.clearSelection();
+            }
 
-                    var lookupTableDefereds = [];
-                    array.forEach(data, function (field) {
-                        if (field.lookup_table != null) {
-                            lookupTableDefereds.push(
-                                lookupTableCached.load(field.lookup_table.id)
-                            );
+            if(this.btnEmailStore.item){
+                var widget = this;
+                api.route("notification.subscriber.collection")
+                    .get()
+                    .then(function (response) {
+                        var findNnotif = null;
+                        array.forEach(response, function (f) {
+                            if (f.resource_id==widget.btnResourceStore.item.id
+                                && f.email_id==widget.btnEmailStore.item.id){
+                                findNnotif = f;
+                            }
+                        })
+
+                        // widget.initialSelectRow = findNnotif.features;
+
+                        // создание таблицы
+                        widget._gridConstruct()
+
+                        // выделение строк в таблице
+                        if (findNnotif) {
+                            for (var key in findNnotif.features) {
+                                widget._grid.select(widget._grid.row(findNnotif.features[key]))
+                            }
                         }
-                    });
 
-                    all(lookupTableDefereds).then(function () {
-                        widget.initializeGrid();
                     });
-                });
+            }else {
+                this._gridConstruct()
+            }
         },
 
 
@@ -314,7 +342,7 @@ define([
                 }));
             }
 
-            // создание таблицы объектов
+            // создание или обновление таблицы объектов
             if (this._grid) {
                 this._grid.setStore(this.store);
             }else {
@@ -323,7 +351,6 @@ define([
                     columns: columns,
                     queryOptions: this.queryOptions
                 });
-
 
                 // Подпись для чекбокса "только выделенные"
                 new LabelText({
@@ -499,10 +526,6 @@ define([
                 function () {
                     widget.gridPane.set("content", widget._grid.domNode);
                     widget._grid.startup();
-                    return widget;
-                }
-            ).then(
-                function (widget) {
                     if (widget.initialSelectRow) {
                         for (var key in widget.initialSelectRow) {
                             widget._grid.select(widget._grid.row(widget.initialSelectRow[key]))

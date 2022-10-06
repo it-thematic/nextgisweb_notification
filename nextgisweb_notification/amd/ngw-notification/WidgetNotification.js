@@ -98,6 +98,7 @@ define([
         templateString: i18n.renderTemplate(template),
         subscribeWindow: null,
         createWindow: null,
+        currentSelectRows: null,
 
         constructor: function (params) {
             declare.safeMixin(this, params);
@@ -120,9 +121,12 @@ define([
                 {field: "features", label: "Объекты", unhidable: true, sortable: true, width: 150}
             ];
 
+            // TODO !!!
             // создание таблицы
-            this._grid = new GridClass({columns: columns});
-            // вносим данные в таблицу
+            this._grid = new GridClass({
+                // store: this._data,
+                columns: columns
+            });
             this._grid.renderArray(this._data);
 
             domStyle.set(this._grid.domNode, "height", "100%");
@@ -131,35 +135,49 @@ define([
             // обновление подписка
             this._grid.on(".dgrid-row:dblclick", lang.hitch(this, this._onUpdateSubscribe));
 
+            this._grid.on(".dgrid-row:click", lang.hitch(this, this._selectRow));
+
             // создание новой подписки
             this.btnCreateSubscribe.on("click", lang.hitch(this, this._onCreate));
 
-            // TODO сделать удаление подписки
             // удаление подписки
             this.btnDeleteSubscribe.on("click", lang.hitch(this, this._onDelete));
 
             this._gridInitialized.resolve();
         },
 
-
-        // TODO сделать проверку, что такой email и ресурс уже созданы ?
-        /** Добавление новой подписки */
-        addNewRow: function (data){
-            this._data.push(data)
-            this._grid.renderArray([data]);
+        _selectRow: function (event){
+            var idx = event.selectorTarget.rowIndex;
+            this.currentSelectRows = this._grid.row(idx).data
         },
 
         /** Удаление подписки */
         _onDelete: function (event){
-            console.log('_onDelete')
-            console.log(event)
+            var request = {
+                resource_id: this.currentSelectRows.resource_id,
+                email_id: this.currentSelectRows.email_id,
+                feature_ids: []
+            }
+
+            api.route("notification.subscriber")
+                .post({json: request})
+                .then(function (response) {console.log(response)});
+        },
+
+        _updateGrid: function (){
+            var widget = this
+            api.route("notification.subscriber.collection")
+                .get()
+                .then(function (data) {
+                   widget._grid.setStore(data);
+                });
         },
 
         /** Виджет создание новой подписки */
         _onCreate: function (event){
             this.SubscribeWindow = new SubscribeWindow({
-                widget: this,
-                createNew: true
+                createNew: true,
+                widget: this
             });
             this.SubscribeWindow.show();
         },

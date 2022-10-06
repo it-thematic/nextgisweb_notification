@@ -21,7 +21,7 @@ def field_collection(resource, request):
     result = [{'key': fld.key, 'name': fld.name} for fld in fields if fld.key != 'id']
     return result
 
-# TODO влидация на доступ к ресурсам
+# TODO влидация на доступ к ресурсам вектор слой добавить 1) FeatureLayer 2) точка апи со списком всех слоев в нгв
 def get_resource_desc(resource, request):
     """
     Возвращает информацию об ресурсах.
@@ -43,7 +43,7 @@ def get_resource_desc(resource, request):
 
 def subscriber_collection(resource, request):
     """
-    Возвращает сгруппированные подписки на объекты русурса.
+    Возвращает сгруппированные подписки на объекты русурса по email.
     """
 
     # группируем email, ресурсы и принадлежащие им объекты
@@ -74,7 +74,7 @@ def subscriber_collection(resource, request):
     return result
 
 
-def get_all_notification(resource, request):
+def get_notification(resource, request):
     result = NotificationSubscribe().get_all()
     return dict(subscribers=result)
 
@@ -240,18 +240,23 @@ def update_subscribe(resource, request):
         result = unsubscribe(email=email, resource=resource)
         return dict(succses='Update subscribe')
 
-    # TODO ! протестировать !
     # id объектов текущего ресурса
     id_feat_of_res = {item[0] for item in
                       DBSession.query(NotificationSubscribe.feature_id).
                       filter_by(resource_id=resource.id)}
 
-    # TODO не хватает валидации на ресурс
     # все объекты подписанные на текущий email
-    _links = DBSession.query(NotificationSubscribeEmail.notification_subscribe_id).filter(
-        NotificationSubscribeEmail.notification_email_id==email.id)
-    _subscr = DBSession.query(NotificationSubscribe.feature_id).filter(
-        NotificationSubscribe.id.in_([item[0] for item in _links]))
+    _links = DBSession.query(
+            NotificationSubscribeEmail.notification_subscribe_id).\
+        filter(
+            NotificationSubscribeEmail.notification_email_id==email.id)
+
+    _subscr = DBSession.query(NotificationSubscribe.feature_id).\
+        filter(
+            NotificationSubscribe.id.in_([item[0] for item in _links])).\
+        filter(
+            NotificationSubscribe.resource_id == resource_id)
+
     feature_of_current_email = {item.feature_id for item in _subscr.all()}
 
     # объекты существуют, требуется только подписаться
@@ -264,12 +269,17 @@ def update_subscribe(resource, request):
     # подписка на уже существующие объекты
     if _exist:
         _new_subscruber = list()
-        _notif = DBSession.query(NotificationSubscribe).\
-            filter(NotificationSubscribe.feature_id.in_(_exist))
+        _notif = DBSession.query(
+                NotificationSubscribe).\
+            filter(
+                NotificationSubscribe.feature_id.in_(_exist),
+                NotificationSubscribe.resource_id == resource_id
+        )
         for item in _notif:
             _new_subscruber.append(
                 NotificationSubscribeEmail(
-                    notification_email_id=email.id, notification_subscribe_id=item.id))
+                    notification_email_id=email.id, notification_subscribe_id=item.id)
+            )
         DBSession.add_all(_new_subscruber)
 
     # создание новых объектов и подписка на них
@@ -382,17 +392,12 @@ def get_feature_hash_sha1(feature):
     return hex_dig
 
 
-def notification_subscriber_store(request):
-    # request.resource_permission(PD_READ)
-    return dict()
-
-
 def setup_pyramid(comp, config):
     """API route"""
 
     # NotificationSubscribe
     config.add_route('notification.subscriber', r'/api/notification/')\
-        .add_view(get_all_notification, request_method='GET', renderer='json') \
+        .add_view(get_notification, request_method='GET', renderer='json') \
         .add_view(update_subscribe, request_method='POST', renderer='json')
 
     # NotificationEmail

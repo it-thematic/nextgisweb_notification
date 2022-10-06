@@ -9,6 +9,7 @@ define([
     "dgrid/extensions/ColumnHider",
     "dgrid/extensions/ColumnResizer",
     "dojo/Deferred",
+    "dojo/_base/array",
     "dojo/dom-construct",
     "dojo/promise/all",
     "dojo/store/Memory",
@@ -41,6 +42,7 @@ define([
     ColumnHider,
     ColumnResizer,
     Deferred,
+    array,
     domConstruct,
     all,
     Memory,
@@ -65,16 +67,16 @@ define([
     FeatureGridNotif
 ) {
 
-    /** Класс с логикой обработки таблицы */
+
     return declare(Dialog, {
 
         createNew: false,
 
         constructor: function (options) {
             declare.safeMixin(this, options);
-            this.widget = options.widget
-            this._data = options.row
-            this.title = this.createNew ? 'Создание новой подписки' : options.row.data.resource ;
+            this.title = this.createNew ? 'Создание новой подписки' : options.row.data.resource;
+            this.widget = options.widget;
+            this._data = options.row;
         },
 
         buildRendering: function () {
@@ -85,9 +87,9 @@ define([
 
             // создание таблицы
             this._grid = new FeatureGridNotif({
-                style: "width: 100%; height: 100%; padding: 0",
                 initialSelectRow: this.createNew ? null : this._data.data.features,
                 layerId: this.createNew ? null : this._data.data.resource_id,
+                style: "width: 100%; height: 100%; padding: 0",
                 createNew: this.createNew
             })
             this._grid.placeAt(this.mainContainer);
@@ -113,49 +115,69 @@ define([
             }).placeAt(this.actionBarDown);
         },
 
-        // очистка от всех подписок от ресурса
+        /**
+         * Очистка от всех подписок от ресурса
+         */
         clean: function () {
             var request = {
                     resource_id: this._data.data.resource_id,
-                    feature_ids: [],
-                    email_id: this._data.data.email_id
+                    email_id: this._data.data.email_id,
+                    feature_ids: []
                 }
             api.route("notification.subscriber")
-                .post({
-                    json: request
-                })
-                .then(function (response) {
-                    console.log(response)
-                });
+                .post({json: request})
+                .then(function (response) {console.log(response)});
         },
 
-        // проверка не изменились ли объекты для подписки
+        /**
+         * проверка не изменились ли объекты для подписки
+         */
         equalArrays: function(a, b) {
             return !(a.sort() > b.sort() || a.sort() < b.sort());
         },
 
-        // подписка на изменения объектов ресурса
+        // TODO оптимизировать
+        /**
+         * Подписка на изменения объектов ресурса
+         */
         save: function () {
-            // получаем выделенные объекты
+
             var features = Object.keys(this._grid._grid.selection).map(Number);
 
-            // если в подписки внесены изменения
-            if (!this.equalArrays(this._data.data.features, features)) {
-                var request = {
-                    resource_id: this._data.data.resource_id,
-                    email_id: this._data.data.email_id,
-                    feature_ids: features
+            // создаем новую подписку или обновляем старую
+            if (this.createNew){
+                var resource_id = this._grid.btnResourceStore.item.id;
+                var email_id = this._grid.btnEmailStore.item.id;
+
+                var createNotif = true;
+                array.forEach(this.widget._data, function (f){
+                    if (f.resource_id == email_id && f.email_id == resource_id){createNotif = false;}
+                })
+                if (createNotif){
+                    var request = {resource_id: resource_id, email_id: email_id, feature_ids: features}
+                    var widget = this
+                    // обновляем подписку
+                    api.route("notification.subscriber")
+                        .post({json: request})
+                        .then(function (response) {
+                            console.log(response);
+                            widget.widget._updateGrid();
+                        });
                 }
 
-                // this.widget.save(request)
-                // запрос на обновление подписок
-                api.route("notification.subscriber")
-                    .post({
-                        json: request
-                    })
-                    .then(function (response) {
-                        console.log(response)
-                    });
+            }else {
+                // если в подписки внесены изменения
+                if (!this.equalArrays(this._data.data.features, features)) {
+                    var request = {
+                        resource_id: this._data.data.resource_id,
+                        email_id: this._data.data.email_id,
+                        feature_ids: features
+                    }
+                    // обновляем подписку
+                    api.route("notification.subscriber")
+                        .post({json: request})
+                        .then(function (response) {console.log(response)});
+                }
             }
 
             this.hide()
