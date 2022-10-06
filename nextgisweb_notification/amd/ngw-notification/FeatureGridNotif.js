@@ -152,6 +152,12 @@ define([
 
                     all(lookupTableDefereds).then(function () {
                         widget.initializeGrid();
+                        return widget
+                    }).then(function (widget){
+                        if (widget.initialSelectRow) {
+                            for (var key in widget.initialSelectRow.features) {
+                                widget._grid.select(widget._grid.row(widget.initialSelectRow.features[key]))}
+                        }
                     });
                 });
         },
@@ -224,10 +230,11 @@ define([
         /**
          * Выбор ресурса
          */
-        _chooseSource: function (){
+        _chooseResource: function (){
             this.createNew = false;
             this.layerId = this.btnResourceStore.item.id;
 
+            // очищение от выделения
             if (this._grid){
                 this._grid.clearSelection();
             }
@@ -237,6 +244,7 @@ define([
                 api.route("notification.subscriber.collection")
                     .get()
                     .then(function (response) {
+                        // получаем строки для выделения
                         var findNnotif = null;
                         array.forEach(response, function (f) {
                             if (f.resource_id==widget.btnResourceStore.item.id
@@ -245,18 +253,9 @@ define([
                             }
                         })
 
-                        // widget.initialSelectRow = findNnotif.features;
-
                         // создание таблицы
-                        widget._gridConstruct()
-
-                        // выделение строк в таблице
-                        if (findNnotif) {
-                            for (var key in findNnotif.features) {
-                                widget._grid.select(widget._grid.row(findNnotif.features[key]))
-                            }
-                        }
-
+                        widget.initialSelectRow = findNnotif;
+                        widget._gridConstruct();
                     });
             }else {
                 this._gridConstruct()

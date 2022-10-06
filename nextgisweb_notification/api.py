@@ -228,6 +228,7 @@ def update_subscribe(resource, request):
     feature_ids = set(request.json.get("feature_ids", None))
     email_id = request.json.get("email_id", None)
 
+    # all(isinstance(x, int) for x in feature_ids)
     # проверка resource и email на существование
     try:
         email = DBSession.query(NotificationEmail).filter_by(id=email_id).one()

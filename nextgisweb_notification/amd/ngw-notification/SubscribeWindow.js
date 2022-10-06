@@ -143,6 +143,9 @@ define([
         save: function () {
 
             var features = Object.keys(this._grid._grid.selection).map(Number);
+            features = features.filter(function (value) {
+                return !Number.isNaN(value);
+            });
 
             // создаем новую подписку или обновляем старую
             if (this.createNew){

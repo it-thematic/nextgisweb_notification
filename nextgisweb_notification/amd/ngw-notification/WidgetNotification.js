@@ -15,6 +15,8 @@ define([
     "dgrid/Grid",
     "dgrid/Keyboard",
     // other
+    "dojo/store/Memory",
+    "dojo/store/Observable",
     "dojo/domReady!",
     "dojo/data/ItemFileWriteStore",
     "dojo/_base/lang",
@@ -58,6 +60,8 @@ define([
     ColumnResizer,
     Grid,
     Keyboard,
+    Memory,
+    Observable,
     domReady,
     // other
     ItemFileWriteStore,
@@ -121,10 +125,14 @@ define([
                 {field: "features", label: "Объекты", unhidable: true, sortable: true, width: 150}
             ];
 
-            // TODO !!!
+            var store = new Observable(
+                // new Memory({ data: this._data })
+                new NotificationStore()
+            );
+
             // создание таблицы
             this._grid = new GridClass({
-                // store: this._data,
+                store: store,
                 columns: columns
             });
             this._grid.renderArray(this._data);
@@ -135,7 +143,11 @@ define([
             // обновление подписка
             this._grid.on(".dgrid-row:dblclick", lang.hitch(this, this._onUpdateSubscribe));
 
-            this._grid.on(".dgrid-row:click", lang.hitch(this, this._selectRow));
+            // this._grid.on(".dgrid-row:click", lang.hitch(this, this._selectRow));
+            this._grid.on("dgrid-select", lang.hitch(this, this._selectRow));
+
+            // this._grid.on(topic.subscribe(
+            //     'grid.highlight', lang.hitch(this, this._selectRow)));
 
             // создание новой подписки
             this.btnCreateSubscribe.on("click", lang.hitch(this, this._onCreate));
@@ -147,8 +159,10 @@ define([
         },
 
         _selectRow: function (event){
-            var idx = event.selectorTarget.rowIndex;
-            this.currentSelectRows = this._grid.row(idx).data
+            this.currentSelectRows = event.rows[0].data
+            // var idx = event.selectorTarget.rowIndex;
+            // this.currentSelectRows = this._grid.row(idx)
+            // this.currentSelectRows = this._grid.row(idx).data
         },
 
         /** Удаление подписки */
@@ -159,9 +173,13 @@ define([
                 feature_ids: []
             }
 
+            var widget = this;
             api.route("notification.subscriber")
                 .post({json: request})
-                .then(function (response) {console.log(response)});
+                .then(function (response) {
+                    console.log(response)
+                    widget._updateGrid()
+                });
         },
 
         _updateGrid: function (){
@@ -169,7 +187,9 @@ define([
             api.route("notification.subscriber.collection")
                 .get()
                 .then(function (data) {
-                   widget._grid.setStore(data);
+                    widget._grid.refresh()
+                    widget._grid.clearSelection();
+                    widget._grid.renderArray(data);
                 });
         },
 
@@ -207,30 +227,6 @@ define([
             this.btnCreateSubscribe.iconNode.setAttribute('data-icon', 'open_in_new');
             this.btnDeleteSubscribe.iconNode.setAttribute('data-icon', 'delete');
         },
-
-        // save: function (request){
-        //     // запрос на обновление подписок
-        //     api.route("notification.subscriber")
-        //         .post({
-        //             json: request
-        //         })
-        //         .then(function (response) {
-        //             console.log('response')
-        //             console.log(response)
-        //         });
-        //
-        //     var widget = this;
-        //     api.route("notification.subscriber.collection")
-        //         .get()
-        //         .then(function (data) {
-        //             widget._data = data;
-        //             return widget
-        //         }).then(function (widget) {
-        //             widget._grid.store = widget._data;
-        //             widget._grid.refresh();
-        //         })
-        // }
-
     });
 
 });
