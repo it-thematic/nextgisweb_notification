@@ -190,6 +190,8 @@ define([
             // Для создания новой подписки добавляем выбор email и resource
             if (this.createNew) {
                 var widget = this
+
+                // получаем email
                 api.route("notification.email")
                     .get()
                     .then(function (data) {
@@ -197,6 +199,7 @@ define([
                         for (let key in data) {_emails.push({id: data[key].id, name: data[key].email})}
                         widget.emailStore = new Memory({data: _emails});
 
+                        // получаем resource
                         api.route('resource.description')
                             .get()
                             .then(function (data){
@@ -223,8 +226,10 @@ define([
          * Выбор email
          */
         _chooseEmail: function (){
+
             console.log('_chooseEmail')
             console.log(this.btnEmailStore.item)
+
         },
 
         /**
@@ -252,9 +257,9 @@ define([
                                 findNnotif = f;
                             }
                         })
+                        widget.initialSelectRow = findNnotif;
 
                         // создание таблицы
-                        widget.initialSelectRow = findNnotif;
                         widget._gridConstruct();
                     });
             }else {

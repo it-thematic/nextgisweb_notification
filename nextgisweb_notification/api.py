@@ -10,6 +10,9 @@ from sqlalchemy.orm.exc import NoResultFound
 import hashlib
 from sqlalchemy import func, delete, distinct, update
 from nextgisweb.feature_layer.interface import IFeatureLayer
+from pyramid_mailer.message import Message
+from pyramid_mailer.mailer import Mailer
+import re
 
 # права для доступа
 PERM_READ = DataScope.read
@@ -21,7 +24,9 @@ def field_collection(resource, request):
     result = [{'key': fld.key, 'name': fld.name} for fld in fields if fld.key != 'id']
     return result
 
-# TODO влидация на доступ к ресурсам вектор слой добавить 1) FeatureLayer 2) точка апи со списком всех слоев в нгв
+
+# TODO
+#  1) FeatureLayer 2) точка апи со списком всех слоев в нгв
 def get_resource_desc(resource, request):
     """
     Возвращает информацию об ресурсах.
@@ -34,13 +39,13 @@ def get_resource_desc(resource, request):
             Resource.id.label('id'),
             Resource.display_name.label('resource')) \
         .filter(
-            Resource.cls == 'postgis_layer')
+            Resource.cls.in_(['postgis_layer', 'vector_layer']))
 
     data = _query.filter(Resource.id.in_(res_ids)).all() if res_ids else _query.all()
     result = [elem._asdict() for elem in data]
     return result
 
-
+# TODO что если подписок не существует, ввести проверку
 def subscriber_collection(resource, request):
     """
     Возвращает сгруппированные подписки на объекты русурса по email.
@@ -67,10 +72,15 @@ def subscriber_collection(resource, request):
             Resource.id).\
         all()
 
-    # переводим в словарь для сериализации
+    # получаем сгруппированные данные в виде словарей
     result = [elem._asdict() for elem in data]
 
-    # TODO получать наименоване объектов для отображения в таблице
+    # получааем наименования объектов ресурса
+    for row in result:
+        query = Resource.filter_by(id=row['resource_id']).one().feature_query()
+        query.filter(["id", "in", ",".join(map(str, row['features']))])
+        row['features_label'] = [feature.label for feature in query()]
+
     return result
 
 
@@ -89,15 +99,14 @@ def create_notification_email(resource, request):
     Создать нового подписчика.
     """
     email = request.json.get('email', None)
-    # TODO проверка что это email
-    if not email:
-        return dict(succsess="Succsess create.", id=new_not.id)
+    if not (email and bool(re.search(r"^[\w\.\+\-]+\@[\w]+\.[a-z]{2,3}$", email))):
+        return dict(succsess="Email not valid.")
 
     # создание ного подписчика
-    new_not = NotificationEmail(email=email)
-    DBSession.add(new_not)
+    new_email = NotificationEmail(email=email)
+    DBSession.add(new_email)
     DBSession.flush()
-    return dict(succsess="Succsess create.", id=new_not.id)
+    return dict(succsess="Succsess create.", id=new_email.id)
 
 
 def delete_notification_email(resource, request):
@@ -171,17 +180,20 @@ def unsubscribe(email=None, resource=None, delete=None):
     try:
         # отписываем подписчика либо от всех объектов либо только от указанных
         if delete:
-            _feat_of_res = DBSession.query(NotificationSubscribe.id).\
+            _feat_of_res = DBSession.query(
+                    NotificationSubscribe.id).\
                 filter(
                     NotificationSubscribe.feature_id.in_(delete),
                     NotificationSubscribe.resource_id == resource.id)
         else:
-            _feat_of_res = DBSession.query(NotificationSubscribe.id).\
+            _feat_of_res = DBSession.query(
+                    NotificationSubscribe.id).\
                 filter_by(
                     resource_id=resource.id)
 
         # получаем объекты для отписки
-        _links = DBSession.query(NotificationSubscribeEmail).\
+        _links = DBSession.query(
+                NotificationSubscribeEmail).\
             filter(
                 NotificationSubscribeEmail.notification_subscribe_id.in_([item[0] for item in _feat_of_res]),
                 NotificationSubscribeEmail.notification_email_id == email.id)
@@ -217,8 +229,6 @@ def delete_lonly_subscribe():
     return lonely
 
 
-# TODO
-#  1 - проверка на числа а не строки в feature_ids
 def update_subscribe(resource, request):
     """
     Обновление подписки пользователей на изменение объекта.
@@ -228,13 +238,16 @@ def update_subscribe(resource, request):
     feature_ids = set(request.json.get("feature_ids", None))
     email_id = request.json.get("email_id", None)
 
-    # all(isinstance(x, int) for x in feature_ids)
     # проверка resource и email на существование
     try:
         email = DBSession.query(NotificationEmail).filter_by(id=email_id).one()
         resource = Resource.filter_by(id=resource_id).one()
     except NoResultFound:
         return dict(error="Resource or Email not found", resource_id=resource_id, email=email_id)
+
+    # проверка объектов
+    if not all(isinstance(x, int) for x in feature_ids):
+        return dict(error="Features must be integer type", feature_ids=feature_ids)
 
     # отписка email от всех объектов
     if not feature_ids:
@@ -293,9 +306,10 @@ def update_subscribe(resource, request):
 
     return dict(success="Update subscribe.")
 
+
 # TODO :
 #  1 - resource_permission
-def check_change(resource, request):
+def check_features_change(resource, request):
     """
     Вычисляет изменился ли хэш объектов.
     Для каждого и подписчиков группируем все его подписки и вычисляем не изменился ли их хеш.
@@ -305,7 +319,9 @@ def check_change(resource, request):
     result = dict()
 
     # проходимся по всем подписчикам
-    if emails:
+    if not emails:
+        return dict(message='Not email for notification')
+    else:
         for email in emails:
 
             # все подписки текущего email
@@ -313,6 +329,7 @@ def check_change(resource, request):
                 .filter_by(
                     notification_email_id=email.id
                 ).all()
+            # объекты ресурса для проверки на изменение
             objs = DBSession.query(NotificationSubscribe)\
                 .filter(
                     NotificationSubscribe.id.in_([item[0] for item in _links])
@@ -356,27 +373,37 @@ def check_change(resource, request):
             except Exception as e:
                 raise e
 
-    else:
-        # TODO как логировать в NGW
-        print('Нет подписчиков')
-
     # отправка почты
     if result:
         for email, objects in result.items():
-            send_email(email=email, objects=objects)
+            send_email(mailer=request.registry['mailer'],
+                       email=email.email,
+                       objects=objects)
 
-    return dict(result='')
+
+    return dict(message='success')
 
 
-def send_email(email, objects):
+def send_email(mailer=None, email=None, objects=None):
     """
     Отправка извещения подписчику об изменении объектов.
     :param email: NotificationEmail - Email для отправки сообщения.
     :param objects: dict - {Resource: list(Feature, Feature ...)} ресурс с объектами слоя.
     :return:
     """
-    # TODO тут отправка сообщений на Email
-    pass
+
+    _body = str()
+    for key in objects:
+        _body += key.display_name + '\n'
+        for obj in objects[key]:
+            _body += f' - {obj.label}\n'
+
+    message = Message(subject="Уведомление об изменениях",
+            sender=mailer.smtp_mailer.username,
+            recipients=[email],
+            body=_body)
+
+    mailer.send_immediately(message, fail_silently=False)
 
 
 def get_feature_hash_sha1(feature):
@@ -422,8 +449,8 @@ def setup_pyramid(comp, config):
     # ).add_view(notification_subscriber_store,  request_method='GET', renderer='json')
 
     # TODO тестовыая точка API удалить потом
-    config.add_route('check_change', r'/api/check_change')\
-        .add_view(check_change, request_method='POST', renderer='json')
+    config.add_route('notification.sender', r'/api/notification/sender/')\
+        .add_view(check_features_change, request_method='GET', renderer='json')
 
     config.add_route('resource.description', r'/api/resource/description/')\
         .add_view(get_resource_desc, request_method='GET', renderer='json')

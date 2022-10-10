@@ -136,7 +136,7 @@ define([
             return !(a.sort() > b.sort() || a.sort() < b.sort());
         },
 
-        // TODO оптимизировать
+
         /**
          * Подписка на изменения объектов ресурса
          */
@@ -150,24 +150,36 @@ define([
             // создаем новую подписку или обновляем старую
             if (this.createNew){
                 var resource_id = this._grid.btnResourceStore.item.id;
-                var email_id = this._grid.btnEmailStore.item.id;
+                var email_id = null
 
-                var createNotif = true;
-                array.forEach(this.widget._data, function (f){
-                    if (f.resource_id == email_id && f.email_id == resource_id){createNotif = false;}
-                })
-                if (createNotif){
-                    var request = {resource_id: resource_id, email_id: email_id, feature_ids: features}
+                // подписка на уже существующий email
+                if (this._grid.btnEmailStore.item){
+                     email_id = this._grid.btnEmailStore.item.id;
+                     var createNotif = true;
+                     array.forEach(this.widget._data, function (f){
+                         if (f.resource_id == email_id && f.email_id == resource_id){
+                             createNotif = false;}
+                     })
+                    if (createNotif) {
+                        this.notificatonUpdate({
+                            resource_id: resource_id,
+                            email_id: email_id,
+                            feature_ids: features})
+                    }
+                // подписка на новый созданный email
+                }else if (this._grid.btnEmailStore.value){
+                    // проверка корректности email
+                    var request = {email: this._grid.btnEmailStore.value}
                     var widget = this
-                    // обновляем подписку
-                    api.route("notification.subscriber")
-                        .post({json: request})
-                        .then(function (response) {
-                            console.log(response);
-                            widget.widget._updateGrid();
-                        });
+                    api.route("notification.email")
+                        .post({json:request})
+                        .then(function (response){
+                            widget.notificatonUpdate({
+                                resource_id: resource_id,
+                                email_id: response.id,
+                                feature_ids: features})
+                        })
                 }
-
             }else {
                 // если в подписки внесены изменения
                 if (!this.equalArrays(this._data.data.features, features)) {
@@ -185,6 +197,19 @@ define([
 
             this.hide()
         },
+
+        /**
+         * Обновляем подписку
+         */
+        notificatonUpdate: function (request){
+            var widget = this
+            api.route("notification.subscriber")
+                .post({json: request})
+                .then(function (response) {
+                    console.log(response);
+                    widget.widget._updateGrid();
+                });
+        }
 
     });
 

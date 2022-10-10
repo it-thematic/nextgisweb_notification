@@ -112,9 +112,20 @@ define([
             api.route("notification.subscriber.collection")
                 .get()
                 .then(function (data) {
-                    widget._data = data;
-                    widget.initializeGrid()
+                    widget._data = widget._get_title(data);
+                    widget.initializeGrid();
                 });
+        },
+
+        /** Обрезка заголовков */
+        _get_title: function (data) {
+            data.forEach((item) => {
+                var title = item.features_label.join();
+                if (title.length > 100){
+                    item.features_label = title.substring(0, 100) + '...';
+                }
+            })
+            return data
         },
 
         initializeGrid: function (){
@@ -122,7 +133,7 @@ define([
                 // selector({label: "", selectorType: "checkbox", width: 10, unhidable: true}),
                 {field: "email", label: "Email", unhidable: true, sortable: true, width: 30},
                 {field: "resource", label: "Ресурс", unhidable: true, sortable: true, width: 30},
-                {field: "features", label: "Объекты", unhidable: true, sortable: true, width: 150}
+                {field: "features_label", label: "Объекты", unhidable: true, sortable: true, width: 150}
             ];
 
             var store = new Observable(
@@ -143,11 +154,8 @@ define([
             // обновление подписка
             this._grid.on(".dgrid-row:dblclick", lang.hitch(this, this._onUpdateSubscribe));
 
-            // this._grid.on(".dgrid-row:click", lang.hitch(this, this._selectRow));
+            // выделяем строку в таблице
             this._grid.on("dgrid-select", lang.hitch(this, this._selectRow));
-
-            // this._grid.on(topic.subscribe(
-            //     'grid.highlight', lang.hitch(this, this._selectRow)));
 
             // создание новой подписки
             this.btnCreateSubscribe.on("click", lang.hitch(this, this._onCreate));
@@ -158,11 +166,9 @@ define([
             this._gridInitialized.resolve();
         },
 
+        /** выделяем строку в таблице */
         _selectRow: function (event){
             this.currentSelectRows = event.rows[0].data
-            // var idx = event.selectorTarget.rowIndex;
-            // this.currentSelectRows = this._grid.row(idx)
-            // this.currentSelectRows = this._grid.row(idx).data
         },
 
         /** Удаление подписки */
@@ -230,10 +236,3 @@ define([
     });
 
 });
-
-
-
-
-
-
-
