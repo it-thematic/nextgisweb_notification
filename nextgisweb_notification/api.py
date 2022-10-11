@@ -1,18 +1,17 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-from .model import NotificationSubscribeEmail, NotificationSubscribe, NotificationEmail
+
+import hashlib
+import re
+
+from pyramid_mailer.message import Message
+from sqlalchemy import func
+from sqlalchemy.orm.exc import NoResultFound
+
+from nextgisweb.lib.logging import logger
 from nextgisweb.models import DBSession
 from nextgisweb.resource import Resource, DataScope
-from nextgisweb.resource.view import resource_factory
-from nextgisweb.feature_layer import Feature
-from nextgisweb.resource.exception import ResourceNotFound
-from sqlalchemy.orm.exc import NoResultFound
-import hashlib
-from sqlalchemy import func, delete, distinct, update
-from nextgisweb.feature_layer.interface import IFeatureLayer
-from pyramid_mailer.message import Message
-from pyramid_mailer.mailer import Mailer
-import re
+from .model import NotificationSubscribeEmail, NotificationSubscribe, NotificationEmail
 
 # права для доступа
 PERM_READ = DataScope.read
@@ -315,13 +314,14 @@ def check_features_change(resource, request):
     Для каждого и подписчиков группируем все его подписки и вычисляем не изменился ли их хеш.
     :return:
     """
+    logger.info("Начало подготовки данных для отправки по почте...")
     emails = DBSession.query(NotificationEmail).all()
     result = dict()
 
     # проходимся по всем подписчикам
-    if not emails:
-        return dict(message='Not email for notification')
-    else:
+    if emails:
+        logger.info("Идет подготовка данных...")
+
         for email in emails:
 
             # все подписки текущего email
@@ -371,17 +371,21 @@ def check_features_change(resource, request):
                     del result[email]
 
             except Exception as e:
-                raise e
+                logger.error("Ошибка, при подготовке данных...")
+                logger.exception(e)
 
-    # отправка почты
-    if result:
-        for email, objects in result.items():
-            send_email(mailer=request.registry['mailer'],
-                       email=email.email,
-                       objects=objects)
-        return dict(message='success')
+        # отправка почты
+        if result:
+            logger.info("Отправляю данные по почте...")
+            for email, objects in result.items():
+                send_email(mailer=request.registry['mailer'],
+                           email=email.email,
+                           objects=objects)
+            logger.info("Данные успешно отправлены")
+            return dict(message='Success')
 
-    return dict(message='Nothing send.')
+    logger.info("Данных для отправки не найдено...")
+    return dict(message='Nothing to send.')
 
 
 def send_email(mailer=None, email=None, objects=None):
