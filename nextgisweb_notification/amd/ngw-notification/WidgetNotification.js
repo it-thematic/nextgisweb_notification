@@ -136,14 +136,8 @@ define([
                 {field: "features_label", label: "Объекты", unhidable: true, sortable: true, width: 150}
             ];
 
-            var store = new Observable(
-                // new Memory({ data: this._data })
-                new NotificationStore()
-            );
-
             // создание таблицы
             this._grid = new GridClass({
-                store: store,
                 columns: columns
             });
             this._grid.renderArray(this._data);
