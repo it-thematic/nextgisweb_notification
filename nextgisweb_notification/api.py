@@ -403,7 +403,8 @@ def send_email(mailer=None, email=None, objects=None):
             recipients=[email],
             body=_body)
 
-    mailer.send_immediately(message, fail_silently=False)
+    # send_immediately
+    mailer.send(message, fail_silently=False)
 
 
 def get_feature_hash_sha1(feature):
@@ -423,12 +424,12 @@ def get_feature_hash_sha1(feature):
 def setup_pyramid(comp, config):
     """API route"""
 
-    # NotificationSubscribe
+    # Create subscribe
     config.add_route('notification.subscriber', r'/api/notification/')\
         .add_view(get_notification, request_method='GET', renderer='json') \
         .add_view(update_subscribe, request_method='POST', renderer='json')
 
-    # NotificationEmail
+    # Create email for notification
     config.add_route('notification.email', r'/api/notification/email/')\
         .add_view(get_all_notification_email, request_method='GET', renderer='json')\
         .add_view(create_notification_email, request_method='POST', renderer='json')
@@ -440,17 +441,10 @@ def setup_pyramid(comp, config):
     config.add_route('notification.subscriber.collection', r'/api/notification/subscriber/collection/')\
         .add_view(subscriber_collection, request_method='GET', renderer='json')
 
-
-    # config.add_route('notification_email.item', r'/api/notification_email/{id}') \
-    #     .add_view(delete_notification_email, request_method='DELETE', renderer='json')
-
-    # config.add_route(
-    #     'notification.subscriber.store', r'api/notification/subscribers/'
-    # ).add_view(notification_subscriber_store,  request_method='GET', renderer='json')
-
-    # TODO тестовыая точка API удалить потом
+    # Send emailfor changing objects
     config.add_route('notification.sender', r'/api/notification/sender/')\
         .add_view(check_features_change, request_method='GET', renderer='json')
 
+    # Get resource description
     config.add_route('resource.description', r'/api/resource/description/')\
         .add_view(get_resource_desc, request_method='GET', renderer='json')

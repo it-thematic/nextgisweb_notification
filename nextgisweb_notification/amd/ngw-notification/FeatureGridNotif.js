@@ -210,7 +210,7 @@ define([
                                 widget.btnEmailStore.store = widget.emailStore;
                                 widget.btnResourceStore.store = widget.resourceStore;
 
-                                widget.btnEmailStore.on("change", lang.hitch(widget, widget._chooseEmail));
+                                widget.btnEmailStore.on("change", lang.hitch(widget, widget._chooseResource));
                                 widget.btnResourceStore.on("change", lang.hitch(widget, widget._chooseResource));
                             })
                     });
@@ -221,15 +221,12 @@ define([
         },
 
 
-        // TODO
         /**
          * Выбор email
          */
         _chooseEmail: function (){
-
             console.log('_chooseEmail')
             console.log(this.btnEmailStore.item)
-
         },
 
         /**
@@ -237,7 +234,9 @@ define([
          */
         _chooseResource: function (){
             this.createNew = false;
-            this.layerId = this.btnResourceStore.item.id;
+            if (this.btnResourceStore.item != undefined) {
+                this.layerId = this.btnResourceStore.item.id;
+            }
 
             // очищение от выделения
             if (this._grid){
@@ -263,7 +262,8 @@ define([
                         widget._gridConstruct();
                     });
             }else {
-                this._gridConstruct()
+                this.initialSelectRow = undefined;
+                this._gridConstruct();
             }
         },
 
@@ -382,12 +382,12 @@ define([
                 // выделяем объект в таблице
                 var widget = this;
                 this._grid.on("dgrid-select", function (event) {
-                    widget.selectFeatrues({addRows: event.rows});
+                    widget.selectFeatures({addRows: event.rows});
                 });
 
                 // убираем выделение объекта в таблице
                 this._grid.on("dgrid-deselect", function (event) {
-                    widget.selectFeatrues({removeRows: event.rows});
+                    widget.selectFeatures({removeRows: event.rows});
                 });
 
                 this._grid.on('dgrid-refresh-complete', function (event) {
@@ -493,7 +493,7 @@ define([
         /**
          * Обработчик события: выбор одного объекта в таблице объектов
          */
-        selectFeatrues: function (options) {
+        selectFeatures: function (options) {
             var _selectedRows = this.get("selectedRow") || {};
             this.set("selectedRow", null);
 
@@ -521,7 +521,7 @@ define([
             this.selectedCount.domNode.innerText = i18n.gettext("Selected: ") + _selectedCount;
         },
 
-        // TODO счетчик выделенных объектов не работает ! надо разобраться !
+        // TODO счетчик выделенных объектов поправить
         startup: function () {
             this.inherited(arguments);
 

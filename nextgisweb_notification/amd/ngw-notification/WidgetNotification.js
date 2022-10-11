@@ -193,6 +193,7 @@ define([
             api.route("notification.subscriber.collection")
                 .get()
                 .then(function (data) {
+                    widget._data = widget._get_title(data);
                     widget._grid.refresh()
                     widget._grid.clearSelection();
                     widget._grid.renderArray(data);
