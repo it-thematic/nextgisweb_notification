@@ -76,32 +76,8 @@ class NotificationSubscribeEmail(Base, BaseNotification):
     notification_email_id = \
         db.Column(db.Integer, db.ForeignKey('notification_email.id'))
 
-    # children = relationship("Child",
-    #                         cascade="all,delete",
-    #                         backref="parent"
-    #                         )
-
     identity = __tablename__
 
     def __str__(self):
         return str(self.id)
-
-
-# ===============================================
-# ============= Сигналы для моделей =============
-# ===============================================
-# @event.listens_for(DBSession, 'before_commit')
-# def receive_before_commit(session):
-#     print("before commit!")
-
-
-# def my_before_commit(session):
-#     print("before commit!")
-#
-#
-# event.listen(DBSession, "before_commit", my_before_commit)
-
-# @event.listens_for(DBSession, 'before_commit')
-# def receive_after_attach(session, instance):
-#     print("before commit!")
 
