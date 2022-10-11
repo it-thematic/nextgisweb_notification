@@ -404,7 +404,7 @@ def send_email(mailer=None, email=None, objects=None):
             body=_body)
 
     # send_immediately
-    mailer.send(message, fail_silently=False)
+    mailer.send(message)
 
 
 def get_feature_hash_sha1(feature):
