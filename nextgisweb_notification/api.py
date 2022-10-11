@@ -379,9 +379,9 @@ def check_features_change(resource, request):
             send_email(mailer=request.registry['mailer'],
                        email=email.email,
                        objects=objects)
+        return dict(message='success')
 
-
-    return dict(message='success')
+    return dict(message='Nothing send.')
 
 
 def send_email(mailer=None, email=None, objects=None):
@@ -403,9 +403,7 @@ def send_email(mailer=None, email=None, objects=None):
             recipients=[email],
             body=_body)
 
-    # send_immediately
-    mailer.send(message)
-
+    mailer.send_immediately(message, fail_silently=False)
 
 def get_feature_hash_sha1(feature):
     """
