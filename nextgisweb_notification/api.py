@@ -18,12 +18,6 @@ PERM_READ = DataScope.read
 PERM_WRITE = DataScope.write
 
 
-def field_collection(resource, request):
-    fields = NotificationSubscribeEmail.__table__.columns._all_columns
-    result = [{'key': fld.key, 'name': fld.name} for fld in fields if fld.key != 'id']
-    return result
-
-
 # TODO
 #  1) FeatureLayer 2) точка апи со списком всех слоев в нгв
 def get_resource_desc(resource, request):
@@ -40,19 +34,29 @@ def get_resource_desc(resource, request):
         .filter(
             Resource.cls.in_(['postgis_layer', 'vector_layer']))
 
-    data = _query.filter(Resource.id.in_(res_ids)).all() if res_ids else _query.all()
-    result = [elem._asdict() for elem in data]
-    return result
+    if _query:
+        data = _query.filter(Resource.id.in_(res_ids)).all() if res_ids else _query.all()
+        return dict(success=True, data=[elem._asdict() for elem in data])
+
+    return dict(success=True, data=[])
 
 # TODO что если подписок не существует, ввести проверку
 def subscriber_collection(resource, request):
     """
     Возвращает сгруппированные подписки на объекты русурса по email.
+    Формат возвращаемых данных: [
+        {
+             features: [1, 2],
+             resource_id: 10,
+             resource: 'Resource name',
+             email_id: 13,
+             email: 'email@yandex.ru',
+             features_label: ['#1', '#2']
+        }, ....
+    ]
     """
-
     # группируем email, ресурсы и принадлежащие им объекты
     data = DBSession.query(
-            # TDOD feature_ids
             func.array_agg(NotificationSubscribe.feature_id).label('features'),
             NotificationSubscribe.resource_id.label('resource_id'),
             Resource.display_name.label('resource'),
@@ -60,8 +64,7 @@ def subscriber_collection(resource, request):
             NotificationEmail.email.label('email')
         )\
         .filter(
-            NotificationSubscribeEmail.notification_subscribe_id == NotificationSubscribe.id)\
-        .filter(
+            NotificationSubscribeEmail.notification_subscribe_id == NotificationSubscribe.id,
             NotificationSubscribeEmail.notification_email_id == NotificationEmail.id)\
         .filter(
             Resource.id == NotificationSubscribe.resource_id).\
@@ -71,26 +74,25 @@ def subscriber_collection(resource, request):
             Resource.id).\
         all()
 
+    if not data:
+        return dict(success=False, data=[])
+
     # получаем сгруппированные данные в виде словарей
     result = [elem._asdict() for elem in data]
 
-    # получааем наименования объектов ресурса
+    # получаем наименования объектов
     for row in result:
         query = Resource.filter_by(id=row['resource_id']).one().feature_query()
         query.filter(["id", "in", ",".join(map(str, row['features']))])
         row['features_label'] = [feature.label for feature in query()]
-
-    return result
-
-
-def get_notification(resource, request):
-    result = NotificationSubscribe().get_all()
-    return dict(subscribers=result)
+    return dict(success=True, data=result)
 
 
 def get_all_notification_email(resource, request):
     emails = NotificationEmail().get_all()
-    return emails
+    if emails:
+        return dict(success=True, data=emails)
+    return dict(success=True, data=[])
 
 
 def create_notification_email(resource, request):
@@ -98,15 +100,18 @@ def create_notification_email(resource, request):
     Создать нового подписчика.
     """
     email = request.json.get('email', None)
-    if not (email and bool(re.search(r"^[\w\.\+\-]+\@[\w]+\.[a-z]{2,3}$", email))):
-        return dict(succsess="Email not valid.")
+    regx = r"^[\w\.\+\-]+\@[\w]+\.[a-z]{2,3}$"
 
     # создание ного подписчика
-    new_email = NotificationEmail(email=email)
-    DBSession.add(new_email)
-    DBSession.flush()
-    return dict(succsess="Succsess create.", id=new_email.id)
+    if email and bool(re.search(regx, email)):
+        new_email = NotificationEmail(email=email)
+        DBSession.add(new_email)
+        DBSession.flush()
+        return dict(succsess=True,
+                    message='Succsess create',
+                    data={'id':new_email.id})
 
+    return dict(success=False, message="Email not valid.")
 
 def delete_notification_email(resource, request):
     """
@@ -169,7 +174,7 @@ def create_subscribe(email=None, resource=None, create=None):
 
 def unsubscribe(email=None, resource=None, delete=None):
     """
-    Удаление подписки на изменение ресурса.
+    Отписываем Email от подписки на уведомления.
     Удаляет либо все либо указанные подписки на конкретный ресурс.
     :param email: NotificationEmail - объект подпискича на события.
     :param resource: Resource - объект ресурса.
@@ -242,21 +247,28 @@ def update_subscribe(resource, request):
         email = DBSession.query(NotificationEmail).filter_by(id=email_id).one()
         resource = Resource.filter_by(id=resource_id).one()
     except NoResultFound:
-        return dict(error="Resource or Email not found", resource_id=resource_id, email=email_id)
+        return dict(success=False,
+                    message="Resource or Email not found",
+                    data={"resource_id":resource_id, "email_id":email_id})
 
     # проверка объектов
-    if not all(isinstance(x, int) for x in feature_ids):
-        return dict(error="Features must be integer type", feature_ids=feature_ids)
+    if not all(isinstance(id, int) for id in feature_ids):
+        return dict(success=False,
+                    data={"feature_ids":feature_ids},
+                    message="Features must be integer type")
 
     # отписка email от всех объектов
     if not feature_ids:
-        result = unsubscribe(email=email, resource=resource)
-        return dict(succses='Update subscribe')
+        del_count = unsubscribe(email=email, resource=resource)
+        return dict(succses=True, message='Update subscribe')
 
     # id объектов текущего ресурса
     id_feat_of_res = {item[0] for item in
-                      DBSession.query(NotificationSubscribe.feature_id).
-                      filter_by(resource_id=resource.id)}
+                      DBSession.query(
+                          NotificationSubscribe.feature_id).
+                      filter_by(
+                          resource_id=resource.id)
+                      }
 
     # все объекты подписанные на текущий email
     _links = DBSession.query(
@@ -303,7 +315,7 @@ def update_subscribe(resource, request):
     if _delete:
         unsubscribe(email=email, resource=resource, delete=_delete)
 
-    return dict(success="Update subscribe.")
+    return dict(success=True, message="Update subscribe")
 
 
 # TODO :
@@ -312,18 +324,17 @@ def check_features_change(resource, request):
     """
     Вычисляет изменился ли хэш объектов.
     Для каждого и подписчиков группируем все его подписки и вычисляем не изменился ли их хеш.
-    :return:
     """
-    logger.info("Начало подготовки данных для отправки по почте...")
-    emails = DBSession.query(NotificationEmail).all()
-    result = dict()
+    result, emails = dict(), DBSession.query(NotificationEmail).all()
 
-    # проходимся по всем подписчикам
-    if emails:
-        logger.info("Идет подготовка данных...")
+    if not emails:
+        return dict(success=False, message='No email for sent')
 
+    logger.info("Идет подготовка данных...")
+
+    try:
+        # проходимся по всем подписчикам
         for email in emails:
-
             # все подписки текущего email
             _links = DBSession.query(NotificationSubscribeEmail.notification_subscribe_id)\
                 .filter_by(
@@ -340,39 +351,34 @@ def check_features_change(resource, request):
                 continue
             result[email] = dict()
 
-            try:
-                # группируем объекты по ресурсам
-                basket = {item.resource_id: dict() for item in objs}
-                for feature in objs:
-                    if feature.resource_id in basket.keys():
-                        basket[feature.resource_id][feature.feature_id] = feature
+            # группируем объекты по ресурсам
+            basket = {item.resource_id: dict() for item in objs}
+            for feature in objs:
+                if feature.resource_id in basket.keys():
+                    basket[feature.resource_id][feature.feature_id] = feature
 
-                empty = True
-                # проходимся по каждому из ресурсов для email
-                for res_id, notif in basket.items():
-                    # получаем ресурс и его объекты
-                    resource = Resource.filter_by(id=res_id).one()
-                    query = resource.feature_query()
-                    query.filter(["id", "in", ",".join(map(str, notif.keys()))])
+            empty = True
+            # проходимся по каждому из ресурсов для email
+            for res_id, notif in basket.items():
+                # получаем ресурс и его объекты
+                resource = Resource.filter_by(id=res_id).one()
+                query = resource.feature_query()
+                query.filter(["id", "in", ",".join(map(str, notif.keys()))])
 
-                    # проверка изменения объекта по хешу
-                    result[email][resource] = list()
-                    for feature in query():
-                        new_hash = get_feature_hash_sha1(feature)
+                # проверка изменения объекта по хешу
+                result[email][resource] = list()
+                for feature in query():
+                    new_hash = get_feature_hash_sha1(feature)
 
-                        # если объект изменился добавляем его для извещания подписчика
-                        if notif[feature.id].hash != new_hash:
-                            result[email][resource].append(feature)  # добавляем объект для отправки по email
-                            notif[feature.id].hash = new_hash # перезаписываем хеш в объект подписки
-                            empty = False
+                    # если объект изменился добавляем его для извещания подписчика
+                    if notif[feature.id].hash != new_hash:
+                        result[email][resource].append(feature)  # добавляем объект для отправки по email
+                        notif[feature.id].hash = new_hash # перезаписываем хеш в объект подписки
+                        empty = False
 
-                # если совсем никаких изменений нету то но будем отправлять извещание
-                if empty:
-                    del result[email]
-
-            except Exception as e:
-                logger.error("Ошибка, при подготовке данных...")
-                logger.exception(e)
+            # если совсем изменений
+            if empty:
+                del result[email]
 
         # отправка почты
         if result:
@@ -381,11 +387,16 @@ def check_features_change(resource, request):
                 send_email(mailer=request.registry['mailer'],
                            email=email.email,
                            objects=objects)
-            logger.info("Данные успешно отправлены")
-            return dict(message='Success')
+            logger.info("Email успешно отправлены...ok")
+            return dict(success=True, message='The mail has been sent')
+
+    except Exception as e:
+        logger.error("Ошибка, при подготовке данных...")
+        logger.exception(e)
+        return dict(success=False, message='Sent email failure')
 
     logger.info("Данных для отправки не найдено...")
-    return dict(message='Nothing to send.')
+    return dict(success=True, message='No data available')
 
 
 def send_email(mailer=None, email=None, objects=None):
@@ -427,8 +438,7 @@ def setup_pyramid(comp, config):
     """API route"""
 
     # Create subscribe
-    config.add_route('notification.subscriber', r'/api/notification/')\
-        .add_view(get_notification, request_method='GET', renderer='json') \
+    config.add_route('notification.subscriber', r'/api/notification/') \
         .add_view(update_subscribe, request_method='POST', renderer='json')
 
     # Create email for notification
@@ -436,10 +446,7 @@ def setup_pyramid(comp, config):
         .add_view(get_all_notification_email, request_method='GET', renderer='json')\
         .add_view(create_notification_email, request_method='POST', renderer='json')
 
-    # Get Notification field
-    config.add_route('notification.field', r'/api/notification/field/')\
-        .add_view(field_collection, request_method='GET', renderer='json')
-
+    # Getting subscribes grouped by email
     config.add_route('notification.subscriber.collection', r'/api/notification/subscriber/collection/')\
         .add_view(subscriber_collection, request_method='GET', renderer='json')
 

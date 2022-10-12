@@ -17,6 +17,7 @@ define([
     "dojo/touch",
     'dojo/request/xhr',
     "dojo/dom-style",
+    "dojo/dom-class",
     "dijit/layout/ContentPane",
     "dojox/layout/TableContainer",
     "dijit/Dialog",
@@ -30,7 +31,8 @@ define([
     "@nextgisweb/pyramid/api",
     "@nextgisweb/pyramid/i18n!",
     "@nextgisweb/gui/error",
-    "./FeatureGridNotif"
+    "./FeatureGridNotif",
+    "xstyle/css!./resource/Widget.css"
 ], function (
     declare,
     lang,
@@ -50,6 +52,7 @@ define([
     touch,
     xhr,
     domStyle,
+    domClass,
     ContentPane,
     TableContainer,
     Dialog,
@@ -126,7 +129,9 @@ define([
                 }
             api.route("notification.subscriber")
                 .post({json: request})
-                .then(function (response) {console.log(response)});
+                .then(function (response) {
+                    console.log(response)
+                });
         },
 
         /**
@@ -136,6 +141,14 @@ define([
             return !(a.sort() > b.sort() || a.sort() < b.sort());
         },
 
+
+        /**
+         * Проверка email на валидность
+         */
+        checkEmail: function (email){
+            var re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
+            return re.test(email)
+        },
 
         /**
          * Подписка на изменения объектов ресурса
@@ -161,24 +174,26 @@ define([
                              createNotif = false;}
                      })
                     if (createNotif) {
-                        this.notificatonUpdate({
-                            resource_id: resource_id,
-                            email_id: email_id,
-                            feature_ids: features})
+                        this.notificatonUpdate({resource_id: resource_id, email_id: email_id, feature_ids: features})
                     }
                 // подписка на новый созданный email
                 }else if (this._grid.btnEmailStore.value){
-                    // проверка корректности email
-                    var request = {email: this._grid.btnEmailStore.value}
-                    var widget = this
-                    api.route("notification.email")
-                        .post({json:request})
-                        .then(function (response){
-                            widget.notificatonUpdate({
-                                resource_id: resource_id,
-                                email_id: response.id,
-                                feature_ids: features})
-                        })
+                    var email = this._grid.btnEmailStore.value
+
+                    // создание нового email
+                    if (this.checkEmail(email)) {
+                        var request = {email: email};
+                        var widget = this;
+                        domClass.remove(this._grid.btnEmailStore.domNode, 'validateError');
+                        api.route("notification.email")
+                            .post({json: request})
+                            .then(function (response) {
+                                widget.notificatonUpdate({email_id: response.data.id, resource_id: resource_id, feature_ids: features})
+                            })
+                    }else {
+                        domClass.add(this._grid.btnEmailStore.domNode, 'validateError');
+                        return null
+                    }
                 }
             }else {
                 // если в подписки внесены изменения
@@ -191,10 +206,11 @@ define([
                     // обновляем подписку
                     api.route("notification.subscriber")
                         .post({json: request})
-                        .then(function (response) {console.log(response)});
+                        .then(function (response) {
+                            console.log(response)
+                        });
                 }
             }
-
             this.hide()
         },
 

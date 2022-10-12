@@ -194,24 +194,31 @@ define([
                 // получаем email
                 api.route("notification.email")
                     .get()
-                    .then(function (data) {
-                        var _emails = []
+                    .then(function (respones) {
+
+                        // создаем список email
+                        var _emails = [], data = respones.data;
                         for (let key in data) {_emails.push({id: data[key].id, name: data[key].email})}
                         widget.emailStore = new Memory({data: _emails});
 
                         // получаем resource
                         api.route('resource.description')
                             .get()
-                            .then(function (data){
-                                var _resources = []
-                                for (let elem in data) {_resources.push({id:data[elem].id, name:data[elem].resource})}
-                                widget.resourceStore = new Memory({data: _resources});
+                            .then(function (response){
 
-                                widget.btnEmailStore.store = widget.emailStore;
-                                widget.btnResourceStore.store = widget.resourceStore;
+                                // создаем список resource
+                                if (response.data) {
+                                    var _resources = []; data = response.data
+                                    for (let elem in data) {_resources.push({id: data[elem].id, name: data[elem].resource})}
+                                    widget.resourceStore = new Memory({data: _resources});
 
-                                widget.btnEmailStore.on("change", lang.hitch(widget, widget._chooseResource));
-                                widget.btnResourceStore.on("change", lang.hitch(widget, widget._chooseResource));
+                                    // TODO ! ВАЖНЫЙ ВОПРОС !
+                                    widget.btnEmailStore.store = widget.emailStore;
+                                    widget.btnResourceStore.store = widget.resourceStore;
+
+                                    widget.btnEmailStore.on("change", lang.hitch(widget, widget._chooseResource));
+                                    widget.btnResourceStore.on("change", lang.hitch(widget, widget._chooseResource));
+                                }
                             })
                     });
             }else{
@@ -250,7 +257,7 @@ define([
                     .then(function (response) {
                         // получаем строки для выделения
                         var findNnotif = null;
-                        array.forEach(response, function (f) {
+                        array.forEach(response.data, function (f) {
                             if (f.resource_id==widget.btnResourceStore.item.id
                                 && f.email_id==widget.btnEmailStore.item.id){
                                 findNnotif = f;

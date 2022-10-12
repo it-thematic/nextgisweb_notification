@@ -111,9 +111,11 @@ define([
             var widget = this;
             api.route("notification.subscriber.collection")
                 .get()
-                .then(function (data) {
-                    widget._data = widget._get_title(data);
-                    widget.initializeGrid();
+                .then(function (responses) {
+                    if(responses) {
+                        widget._data = widget._get_title(responses.data);
+                        widget.initializeGrid();
+                    }
                 });
         },
 
@@ -186,11 +188,13 @@ define([
             var widget = this
             api.route("notification.subscriber.collection")
                 .get()
-                .then(function (data) {
-                    widget._data = widget._get_title(data);
-                    widget._grid.refresh()
-                    widget._grid.clearSelection();
-                    widget._grid.renderArray(data);
+                .then(function (response) {
+                    if (response.data) {
+                        widget._data = widget._get_title(response.data);
+                        widget._grid.refresh()
+                        widget._grid.clearSelection();
+                        widget._grid.renderArray(response.data);
+                    }
                 });
         },
 
