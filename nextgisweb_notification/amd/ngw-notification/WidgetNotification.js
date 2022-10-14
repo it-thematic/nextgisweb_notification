@@ -41,8 +41,7 @@ define([
     "dijit/form/Button",
     "dijit/form/TextBox",
     "dijit/form/CheckBox",
-    "./SubscribeWindow",
-    "./CreateWindow"
+    "./SubscribeWindow"
 ], function (
     declare,
     BorderContainer,
@@ -86,11 +85,9 @@ define([
     Button,
     TextBox,
     CheckBox,
-    SubscribeWindow,
-    CreateWindow
+    SubscribeWindow
 ) {
 
-    // TODO оптимизировать // var GridClass = declare([Grid, Selection], {
     var GridClass = declare([Grid, Keyboard, Selection], {
             selectionMode: "single",
             allowTextSelection: true,
@@ -101,7 +98,6 @@ define([
     return declare([BorderContainer, _TemplatedMixin, _WidgetsInTemplateMixin], {
         templateString: i18n.renderTemplate(template),
         subscribeWindow: null,
-        createWindow: null,
         currentSelectRows: null,
 
         constructor: function (params) {

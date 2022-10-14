@@ -260,7 +260,7 @@ define([
                         array.forEach(response.data, function (f) {
                             if (f.resource_id==widget.btnResourceStore.item.id
                                 && f.email_id==widget.btnEmailStore.item.id){
-                                findNnotif = f;
+                                findNnotif = f.features;
                             }
                         })
                         widget.initialSelectRow = findNnotif;
@@ -522,28 +522,34 @@ define([
          * Обновляем счетчик текущих выделенных полей.
          */
         updateObjectCount: function (){
-            // Нужно довести до ума LabelText чтобы значение текста устанавливалось через this.selectedCount.set("value", <значение>);
             let _selectedCount = !!this.selectedRow ? Object.keys(this.selectedRow).length : 0;
-            if (this.selectedRow && this.selectedRow.last !== undefined){_selectedCount--}
+            if (this.selectedRow && this.selectedRow.last !== undefined){
+                _selectedCount--
+            }
             this.selectedCount.domNode.innerText = i18n.gettext("Selected: ") + _selectedCount;
         },
 
-        // TODO счетчик выделенных объектов поправить
         startup: function () {
             this.inherited(arguments);
 
             var widget = this;
-            this._gridInitialized.then(
-                function () {
+            this._gridInitialized.then(function () {
                     widget.gridPane.set("content", widget._grid.domNode);
                     widget._grid.startup();
+
+                    // инициализируем таблицу с выделенными строками
+                    if (!widget.selectedRow){
+                        widget.selectedRow = {};
+                    }
                     if (widget.initialSelectRow) {
                         for (var key in widget.initialSelectRow) {
-                            widget._grid.select(widget._grid.row(widget.initialSelectRow[key]))
+                            var idx = widget.initialSelectRow[key];
+                            widget._grid.select(widget._grid.row(idx));
+                            widget.selectedRow[idx] = widget._grid.row(idx);
                         }
                     }
-                }
-            );
+                    widget.updateObjectCount();
+                });
            this.btnFilter.iconNode.setAttribute('data-icon', 'filter_alt');
         },
 
