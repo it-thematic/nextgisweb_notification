@@ -386,8 +386,7 @@ def check_features_change(resource, request):
             for email, objects in result.items():
                 send_email(mailer=request.registry['mailer'],
                            email=email.email,
-                           objects=objects)
-            logger.info("Email успешно отправлены...ok")
+                           objects={ k: v for k,v in objects.items() if v })
             return dict(success=True, message='The mail has been sent')
 
     except Exception as e:
@@ -409,7 +408,7 @@ def send_email(mailer=None, email=None, objects=None):
 
     _body = str()
     for key in objects:
-        _body += key.display_name + '\n'
+        _body += key.display_name + ': \n'
         for obj in objects[key]:
             _body += f' - {obj.label}\n'
 
@@ -419,6 +418,7 @@ def send_email(mailer=None, email=None, objects=None):
             body=_body)
 
     mailer.send_immediately(message, fail_silently=False)
+    logger.info("Email успешно отправлены...ok")
 
 def get_feature_hash_sha1(feature):
     """
@@ -450,7 +450,7 @@ def setup_pyramid(comp, config):
     config.add_route('notification.subscriber.collection', r'/api/notification/subscriber/collection/')\
         .add_view(subscriber_collection, request_method='GET', renderer='json')
 
-    # Send emailfor changing objects
+    # Send email for changing objects
     config.add_route('notification.sender', r'/api/notification/sender/')\
         .add_view(check_features_change, request_method='GET', renderer='json')
 

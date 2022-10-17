@@ -204,10 +204,12 @@ define([
                         feature_ids: features
                     }
                     // обновляем подписку
+                    var widget = this;
                     api.route("notification.subscriber")
                         .post({json: request})
                         .then(function (response) {
-                            console.log(response)
+                            console.log(response);
+                            widget.widget._updateGrid();
                         });
                 }
             }
