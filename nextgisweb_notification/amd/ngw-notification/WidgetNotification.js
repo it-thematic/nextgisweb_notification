@@ -3,18 +3,27 @@ define([
     "dijit/layout/BorderContainer",
     "dijit/_TemplatedMixin",
     "dijit/_WidgetsInTemplateMixin",
+    "dijit/Dialog",
+    "dijit/ConfirmDialog",
     "dojo/text!./template/NotificationGrid.hbs",
     // dgrid & plugins
+    "dgrid/OnDemandGrid",
     "dgrid/Selection",
     "dgrid/selector",
+    "dgrid/extensions/ColumnHider",
+    "dgrid/extensions/ColumnResizer",
     "dgrid/Grid",
     "dgrid/Keyboard",
     // other
+    "dojo/store/Memory",
+    "dojo/store/Observable",
     "dojo/domReady!",
+    "dojo/data/ItemFileWriteStore",
     "dojo/_base/lang",
     "dojo/_base/array",
     "dojo/Deferred",
     "dojo/promise/all",
+    "dojo/store/Observable",
     "dojo/dom-style",
     "dojo/dom-class",
     "dojo/json",
@@ -23,7 +32,14 @@ define([
     "openlayers/ol",
     "@nextgisweb/pyramid/api",
     "@nextgisweb/pyramid/i18n!",
+    "ngw-lookup-table/cached",
+    "ngw-feature-layer/FeatureStore",
+    "./NotificationStore",
     // template
+    "dijit/layout/ContentPane",
+    "dijit/Toolbar",
+    "dijit/form/Button",
+    "dijit/form/TextBox",
     "dijit/form/CheckBox",
     "./SubscribeWindow"
 ], function (
@@ -31,19 +47,28 @@ define([
     BorderContainer,
     _TemplatedMixin,
     _WidgetsInTemplateMixin,
+    Dialog,
+    ConfirmDialog,
     // hbs templates
     template,
     // dgrid & plugins
+    OnDemandGrid,
     Selection,
     selector,
+    ColumnHider,
+    ColumnResizer,
     Grid,
     Keyboard,
+    Memory,
+    Observable,
     domReady,
     // other
+    ItemFileWriteStore,
     lang,
     array,
     Deferred,
     all,
+    Observable,
     domStyle,
     domClass,
     json,
@@ -52,6 +77,13 @@ define([
     ol,
     api,
     i18n,
+    lookupTableCached,
+    FeatureStore,
+    NotificationStore,
+    ContentPane,
+    Toolbar,
+    Button,
+    TextBox,
     CheckBox,
     SubscribeWindow
 ) {
@@ -96,6 +128,7 @@ define([
 
         initializeGrid: function (){
             var columns = [
+                // selector({label: "", selectorType: "checkbox", width: 10, unhidable: true}),
                 {field: "email", label: "Email", unhidable: true, sortable: true, width: 30},
                 {field: "resource", label: "Ресурс", unhidable: true, sortable: true, width: 30},
                 {field: "features_label", label: "Объекты", unhidable: true, sortable: true, width: 150}
