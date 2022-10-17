@@ -3,8 +3,6 @@ define([
     "dijit/layout/BorderContainer",
     "dijit/_TemplatedMixin",
     "dijit/_WidgetsInTemplateMixin",
-    "dijit/Dialog",
-    "dijit/ConfirmDialog",
     "ngw-feature-layer/LabelText",
     "dojo/text!./template/FeatureGridNotif.hbs",
     // dgrid & plugins
@@ -17,18 +15,15 @@ define([
     "dojo/store/Memory",
     "dijit/form/ComboBox",
     "dojo/domReady!",
-    "dojo/data/ItemFileWriteStore",
     "dojo/_base/lang",
     "dojo/_base/array",
     "dojo/Deferred",
     "dojo/promise/all",
     "dojo/store/Observable",
     "dojo/dom-style",
-    "dojo/dom-class",
     "dojo/json",
     "dojo/topic",
     "dojo/dom-class",
-    // 'dojo/dom-construct',
     // ngw
     "openlayers/ol",
     "@nextgisweb/pyramid/api",
@@ -37,18 +32,12 @@ define([
     "ngw-feature-layer/FeatureStore",
     "ngw-feature-layer/SearchWindow",
     // template
-    "dijit/layout/ContentPane",
-    "dijit/Toolbar",
-    "dijit/form/Button",
-    "dijit/form/TextBox",
-    "dijit/form/CheckBox"
+    "dijit/Toolbar"
 ], function (
     declare,
     BorderContainer,
     _TemplatedMixin,
     _WidgetsInTemplateMixin,
-    Dialog,
-    ConfirmDialog,
     LabelText,
     // hbs templates
     template,
@@ -62,14 +51,12 @@ define([
     Memory,
     ComboBox,
     domReady,
-    ItemFileWriteStore,
     lang,
     array,
     Deferred,
     all,
     Observable,
     domStyle,
-    domClass,
     // domConstruct,
     json,
     topic,
@@ -81,11 +68,7 @@ define([
     lookupTableCached,
     FeatureStore,
     SearchWindow,
-    ContentPane,
-    Toolbar,
-    Button,
-    TextBox,
-    CheckBox
+    Toolbar
 ) {
 
     /**
